@@ -20,3 +20,18 @@ def serialize_data(raw_json: str, file_name: str):
     
     with open(f"data/raw_data/{today_date}/{file_name}", "w") as fd:
         fd.write(raw_json)
+
+
+def get_nantes_realtime_bicycle_data():
+    url = "https://data.nantesmetropole.fr/api/explore/v2.1/catalog/datasets/244400404_disponibilite-temps-reel-velos-libre-service-naolib-nantes-metropole/records?limit=100"    
+    response = requests.request("GET", url)
+    
+    serialize_data(response.text, "nantes_realtime_bicycle_data.json")
+
+def get_population_data(): 
+    """"get population data from INSEE as a json file"""
+
+    url = "https://tabular-api.data.gouv.fr/api/resources/630e7917-02db-4838-8856-09235719551c/data/json/"    
+    response = requests.request("GET", url)
+    serialize_data(response.text, "insee_population_data.json")
+
