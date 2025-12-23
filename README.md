@@ -1,93 +1,69 @@
-# Sujet de travaux pratiques "Introduction à la data ingénierie"
+# TP - Introduction à l'ingénierie de données
 
-Le but de ce projet est de créer un pipeline ETL d'ingestion, de transformation et de stockage de données pour mettre en pratique les connaissances acquises lors du cours d'introduction à la data ingénierie. Ce sujet présenté propose d'utiliser les données d'utilisation des bornes de vélos open-sources et "temps réel" dans les grandes villes de France.
+## Objectif du projet
 
-Le sujet propose une base qui est un pipeline ETL complet qui couvre la récupération, le stockage et la transformation d'une partie des données de la ville de Paris.
+Ce projet vise à construire un pipeline ETL complet pour ingérer, transformer et stocker des données. Vous travaillerez avec des données publiques en temps réel sur l'utilisation des systèmes de vélos partagés dans plusieurs grandes villes françaises.
 
-Le but du sujet de travaux pratiques est d'ajouter à ce pipeline des données de consolidation, de dimensions et de faits pour la ville de Paris, ainsi que les données provenant d'autres grandes villes de France. Ces données sont disponibles pour les villes de Nantes, de Toulouse ou encore de Strasbourg. Il faudra aussi enrichir ces données avec les données descriptives des villes de France, via une API de l'État français open-source.
+Un pipeline de base est fourni, couvrant la récupération, le stockage et la transformation des données pour Paris. Votre mission consiste à l'enrichir en ajoutant des données de consolidation, des dimensions et des faits pour Paris, puis d'intégrer d'autres villes (Nantes, Toulouse, Strasbourg). Vous enrichirez également ces données avec des informations descriptives sur les communes françaises via une API publique de l'État.
 
-## Explication du code existant
+## Architecture du projet
 
-Le projet est découpé en 3 parties :
+Le projet s'articule autour de trois composants principaux :
 
-1. Un fichier python pour récupérer et stocker les données dans des fichiers localement
+1. **Récupération et stockage** : un script Python qui collecte les données et les sauvegarde localement
+2. **Consolidation** : un script Python qui nettoie les données et les charge dans une base de données type data warehouse
+3. **Agrégation** : un script Python qui crée une modélisation dimensionnelle à partir des données consolidées
 
-2. Un fichier python pour consolider les données et faire un premier load dans une base de données type data-warehouse
+Le fichier `main.py` orchestre l'exécution séquentielle de ces trois étapes.
 
-3. Un fichier python pour agréger les données et créer une modélisation de type dimensionnelle
+## Installation et configuration
 
-
-### Le fichier main.py
-
-Le fichier `main.py` contient le code principal du processus et exécute séquentiellement les différentes fonctions expliquées plus haut.
-
-### Comment faire fonctionner ce projet?
-
-Pour faire fonctionner ce sujet, c'est assez simple:
+Clonez le dépôt et configurez l'environnement :
 
 ```bash 
-git clone https://github.com/salahzaame/data_ing_project
-
+git clone https://github.com/Solenegrd-git/polytech-de-101-2025-tp-subject.git
 cd polytech-de-101-2025-tp-subject
-
 python3 -m venv .venv
-
 source .venv/bin/activate
-
 pip install -r requirements.txt
-
-python src/main.py
 ```
 
-## Comment exécuter le code
+## Lancement du pipeline
 
-Une fois l'environnement virtuel activé et les dépendances installées, vous pouvez exécuter le pipeline ETL complet :
-
-### Exécution du pipeline complet
+Une fois l'environnement activé et les dépendances installées, exécutez :
 
 ```bash
 python src/main.py
 ```
 
-Cette commande lance le processus ETL complet dans l'ordre suivant :
+Le pipeline s'exécute en trois phases :
 
-1. **Ingestion des données** : Récupération des données en temps réel depuis les APIs open-source
-   - Données de Paris (Vélib)
-   - Données de Nantes
-   - Données de population des communes
+**Phase 1 - Ingestion**  
+Collecte des données en temps réel depuis les APIs publiques pour Paris (Vélib), Nantes et les données démographiques des communes.
 
-2. **Consolidation des données** : Transformation et chargement des données brutes dans DuckDB
-   - Création des tables de consolidation
-   - Consolidation des données de villes
-   - Consolidation des données de population
-   - Consolidation des données de stations
-   - Consolidation des relevés de stations
+**Phase 2 - Consolidation**  
+Transformation et chargement dans DuckDB avec création des tables de consolidation pour les villes, populations, stations et relevés.
 
-3. **Agrégation des données** : Création de la modélisation dimensionnelle
-   - Création des tables de dimensions et de faits
-   - Agrégation des dimensions (villes, stations)
-   - Agrégation de la table de faits (relevés de stations)
+**Phase 3 - Agrégation**  
+Construction du modèle dimensionnel avec création des tables de dimensions (villes, stations) et de la table de faits (relevés de stations).
 
-### Vérification des résultats
+## Organisation des données
 
-Après l'exécution, vous pouvez vérifier les résultats en interrogeant la base de données DuckDB :
+- **Données brutes** : stockées au format JSON dans `data/raw_data/YYYY-MM-DD/`
+- **Base de données** : `data/duckdb/mobility_analysis.duckdb` contient l'ensemble des tables consolidées et agrégées
+
+## Exploitation des résultats
+
+Vous pouvez interroger la base de données DuckDB directement :
 
 ```bash
 duckdb data/duckdb/mobility_analysis.duckdb
 ```
 
-
-### Structure des données générées
-
-- **Données brutes** : Stockées dans `data/raw_data/YYYY-MM-DD/` sous format JSON
-- **Base de données** : `data/duckdb/mobility_analysis.duckdb` contient les tables consolidées et agrégées
-
-![Process final](images/image.png)
-
-Au final, vous devriez être capable de réaliser les requêtes SQL suivantes sur votre base de données DuckDB :
+Exemples de requêtes possibles :
 
 ```sql
--- Nb d'emplacements disponibles de vélos dans une ville
+-- Nombre total d'emplacements disponibles par ville
 SELECT dm.NAME, tmp.SUM_BICYCLE_DOCKS_AVAILABLE
 FROM DIM_CITY dm INNER JOIN (
     SELECT CITY_ID, SUM(BICYCLE_DOCKS_AVAILABLE) AS SUM_BICYCLE_DOCKS_AVAILABLE
@@ -97,7 +73,7 @@ FROM DIM_CITY dm INNER JOIN (
 ) tmp ON dm.ID = tmp.CITY_ID
 WHERE lower(dm.NAME) in ('paris', 'nantes', 'vincennes', 'toulouse');
 
--- Nb de vélos disponibles en moyenne dans chaque station
+-- Nombre moyen de vélos disponibles par station
 SELECT ds.name, ds.code, ds.address, tmp.avg_dock_available
 FROM DIM_STATION ds JOIN (
     SELECT station_id, AVG(BICYCLE_AVAILABLE) AS avg_dock_available
@@ -105,6 +81,3 @@ FROM DIM_STATION ds JOIN (
     GROUP BY station_id
 ) AS tmp ON ds.id = tmp.station_id;
 ```
-
-Vous pouvez utiliser la commande `duckdb data/duckdb/mobility_analysis.duckdb` pour ouvrir l'invite de commande DuckDB. 
-
